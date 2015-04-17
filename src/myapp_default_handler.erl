@@ -5,7 +5,9 @@
 -export([handle/2]).
 -export([terminate/3]).
 
+
 -record(state, {}).
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -52,24 +54,23 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     case RequestID of
 	undefined ->
 	    %% Issue a call to the backend server to return all records
-	    return_all;
-	_ID ->
+	    mybackend:return_record();
+	ID ->
 	    %% Issue a call to the backend server to return a
 	    %% specific record
-	    return_specific_id
+	    mybackend:return_record(ID)
     end;
 handle(<<"POST">>, [<<"communication">>], Req) ->
     {ok, Data, _Req2} = cowboy_req:body(Req, []),
     {DecodedData} = jiffy:decode(Data),
-    {ok, Provider} = proplists:get_value(<<"provider">>, DecodedData),
-    
+    {ok, Provider} = proplists:get_value(<<"provider">>, DecodedData),    
     case Provider of
 	<<"google">> ->
 	    %% issue a call to fetch google.com
-	    call_to_google;
+	    mybackend:fetch(google);
 	<<"sumup">> ->
 	    %% issue a call to fetch sumup.com
-	    call_to_sumup
+	    mybackend:fetch(sumup)
     end;
 handle(_, _, Req) ->
     cowboy_req:reply(404, Req).

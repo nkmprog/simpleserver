@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, return_record/0, return_record/1, fetch/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -34,6 +34,32 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+return_record() ->
+    gen_server:call(?SERVER, {return, all}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+return_record(ID)->
+    gen_server:call(?SERVER, {return, {id, ID}}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+fetch(google) ->
+    gen_server:call(?SERVER, {fetch, google});
+fetch(sumup) ->
+    gen_server:call(?SERVER, {fetch, sumup}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -67,7 +93,16 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(_Request, _From, State) ->
+handle_call({return, all}, _From, State) ->
+    Reply = ok,
+    {reply, Reply, State};
+handle_call({return, {id, _ID}}, _From, State) ->
+    Reply = ok,
+    {reply, Reply, State};    
+handle_call({fetch, google}, _From, State) ->
+    Reply = ok,
+    {reply, Reply, State};
+handle_call({fetch, sumup}, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
