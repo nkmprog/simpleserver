@@ -11,7 +11,11 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, return_record/0, return_record/1, fetch/1]).
+-export([start_link/0,
+	 return_record/0,
+	 return_record/1,
+	 fetch/2,
+	 create_unique_id/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -55,10 +59,19 @@ return_record(ID)->
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-fetch(google) ->
+fetch(google, _RequestID) ->
     gen_server:call(?SERVER, {fetch, google});
-fetch(sumup) ->
+fetch(sumup, _RequestID) ->
     gen_server:call(?SERVER, {fetch, sumup}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+create_unique_id() ->
+    gen_server:call(?SERVER, {create, id}).
+    
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -103,6 +116,11 @@ handle_call({fetch, google}, _From, State) ->
     {reply, Reply, State};
 handle_call({fetch, sumup}, _From, State) ->
     Reply = do_get(sumup),
+    {reply, Reply, State};
+handle_call({create, id}, _From, State) ->
+    Timestamp = integer_to_list(create_timestamp()),
+    AlphaNumString = random_string(16),
+    Reply = Timestamp ++ AlphaNumString,
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -159,6 +177,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
 do_get(Site) ->
     {Protocol, URL} = case Site of
 			  google -> {httpc, "http://www.google.com"};
@@ -171,3 +195,23 @@ do_get(Site) ->
 	_ ->
 	    Response
     end.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+create_timestamp() ->    
+    calendar:datetime_to_gregorian_seconds(calendar:local_time()).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% @spec
+%% @end
+%%--------------------------------------------------------------------
+random_string(Len) ->
+    Chrs = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
+    ChrsSize = size(Chrs),
+    F = fun(_, R) ->
+		[element(random:uniform(ChrsSize), Chrs) | R] end,
+    lists:foldl(F, "", lists:seq(1, Len)).

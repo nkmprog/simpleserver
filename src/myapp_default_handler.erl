@@ -64,15 +64,19 @@ handle(<<"POST">>, [<<"communication">>], Req) ->
     {ok, Data, _Req2} = cowboy_req:body(Req, []),
     {DecodedData} = jiffy:decode(Data),
     Provider = proplists:get_value(<<"provider">>, DecodedData),
+    ID = mybackend:create_unique_id(),
     case Provider of
 	<<"google">> ->
 	    %% issue a call to fetch google.com
-	    spawn(fun() -> mybackend:fetch(google) end);
+	    spawn(fun() -> mybackend:fetch(google, ID) end);
 	<<"sumup">> ->
 	    %% issue a call to fetch sumup.com
-	    spawn(fun() -> mybackend:fetch(sumup) end)
+	    spawn(fun() -> mybackend:fetch(sumup, ID) end)
     end,
-    cowboy_req:reply(202, Req);
+    JSON = jiffy:encode({[{<<"request_id">>, list_to_binary(ID)}]}),
+    cowboy_req:reply(202, [
+			   {<<"content-type">>, <<"application/json">>}
+			  ], JSON, Req);
 
 handle(_, _, Req) ->
     cowboy_req:reply(404, Req).
