@@ -67,11 +67,11 @@ handle(<<"POST">>, [<<"communication">>], Req) ->
     ID = mybackend:create_unique_id(),
     case Provider of
 	<<"google">> ->
-	    %% issue a call to fetch google.com
-	    spawn(fun() -> mybackend:fetch(google, ID) end);
+	    %% issue an async call to fetch google.com
+	    ok = mybackend:fetch(google, ID);
 	<<"sumup">> ->
 	    %% issue a call to fetch sumup.com
-	    spawn(fun() -> mybackend:fetch(sumup, ID) end)
+	    ok = mybackend:fetch(sumup, ID)
     end,
     JSON = jiffy:encode({[{<<"request_id">>, list_to_binary(ID)}]}),
     cowboy_req:reply(202, [

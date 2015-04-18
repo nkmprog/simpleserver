@@ -22,7 +22,6 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
--record(state, {}).
 
 %%%===================================================================
 %%% API
@@ -59,10 +58,10 @@ return_record(ID)->
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-fetch(google, _RequestID) ->
-    gen_server:call(?SERVER, {fetch, google});
-fetch(sumup, _RequestID) ->
-    gen_server:call(?SERVER, {fetch, sumup}).
+fetch(google, RequestID) ->
+    gen_server:cast(?SERVER, {fetch, google, RequestID});
+fetch(sumup, RequestID) ->
+    gen_server:cast(?SERVER, {fetch, sumup, RequestID}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -89,7 +88,8 @@ create_unique_id() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}}.
+    inets:start(),
+    {ok, []}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -110,12 +110,6 @@ handle_call({return, all}, _From, State) ->
     {reply, Reply, State};
 handle_call({return, {id, _ID}}, _From, State) ->
     Reply = ok,
-    {reply, Reply, State};    
-handle_call({fetch, google}, _From, State) ->
-    Reply = do_get(google),
-    {reply, Reply, State};
-handle_call({fetch, sumup}, _From, State) ->
-    Reply = do_get(sumup),
     {reply, Reply, State};
 handle_call({create, id}, _From, State) ->
     Timestamp = integer_to_list(create_timestamp()),
@@ -133,8 +127,12 @@ handle_call({create, id}, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast({fetch, google, RequestID}, State) ->
+    do_get(google),
+    {noreply, [RequestID | State]};
+handle_cast({fetch, sumup, RequestID}, State) ->
+    do_get(sumup),
+    {noreply, [RequestID | State]}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -161,6 +159,7 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
+    inets:stop(),
     ok.
 
 %%--------------------------------------------------------------------

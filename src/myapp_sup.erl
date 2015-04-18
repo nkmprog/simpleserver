@@ -38,7 +38,6 @@ start_link() ->
 %%--------------------------------------------------------------------
 
 init([]) ->
-    inets:start(),
 
     RestartStrategy = one_for_one,
     MaxRestarts = 5,
