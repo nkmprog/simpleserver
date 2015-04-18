@@ -22,6 +22,7 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
+-record(state, {table_id}).
 
 %%%===================================================================
 %%% API
@@ -89,7 +90,8 @@ create_unique_id() ->
 %%--------------------------------------------------------------------
 init([]) ->
     inets:start(),
-    {ok, []}.
+    TableID = ets:new(request_records, []),    
+    {ok, #state{table_id=TableID}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -128,11 +130,13 @@ handle_call({create, id}, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({fetch, google, RequestID}, State) ->
-    do_get(google),
-    {noreply, [RequestID | State]};
+    ets:insert(State#state.table_id, {RequestID, create_timestamp()}),
+    spawn(fun() -> do_get(google, RequestID) end),
+    {noreply, State};
 handle_cast({fetch, sumup, RequestID}, State) ->
-    do_get(sumup),
-    {noreply, [RequestID | State]}.
+    ets:insert(State#state.table_id, {RequestID, create_timestamp()}),
+    spawn(fun() -> do_get(sumup, RequestID) end),
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -144,7 +148,15 @@ handle_cast({fetch, sumup, RequestID}, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info({do_get, successfull, ReqId, FinishTime}, State) ->
+    [{ReqId, StartTime}] = ets:lookup(State#state.table_id, ReqId),
+    ElapsedTime = FinishTime - StartTime,
+    ets:insert(State#state.table_id, {ReqId, StartTime, FinishTime, ElapsedTime}), 
+    {noreply, State};
+handle_info({do_get, failed_connect, ReqId, FinishTime}, State) ->
+    [{ReqId, StartTime}] = ets:lookup(State#state.table_id, ReqId),
+    ElapsedTime = FinishTime - StartTime,
+    ets:insert(State#state.table_id, {ReqId, StartTime, FinishTime, ElapsedTime}), 
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -158,8 +170,9 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
     inets:stop(),
+    ets:delete(State#state.table_id),
     ok.
 
 %%--------------------------------------------------------------------
@@ -182,7 +195,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% @spec
 %% @end
 %%--------------------------------------------------------------------
-do_get(Site) ->
+do_get(Site, ReqId) ->
     {Protocol, URL} = case Site of
 			  google -> {httpc, "http://www.google.com"};
 			  sumup -> {httpc, "https://sumup.co.uk/"}
@@ -190,9 +203,9 @@ do_get(Site) ->
     Response = Protocol:request(get, {URL, []}, [], []),
     case Response of
 	{error, {failed_connect, _}} ->
-	    {error, failed_connect};
+	    ?SERVER ! {do_get, failed_connect, ReqId, create_timestamp()};
 	_ ->
-	    Response
+	    ?SERVER ! {do_get, successfull, ReqId, create_timestamp()}
     end.
 
 %%--------------------------------------------------------------------
