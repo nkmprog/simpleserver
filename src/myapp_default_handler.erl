@@ -54,12 +54,26 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     case RequestID of
 	undefined ->
 	    %% Issue a call to the backend server to return all records
-	    mybackend:return_record();
+	    Reqs = mybackend:return_record(),
+	    Data = [{[{id, Id}, {time, Time}]} || {Id, _, _, Time} <- Reqs],
+	    JSON = jiffy:encode({[{data, Data}]}),
+	    cowboy_req:reply(200, [
+				   {<<"content-type">>, <<"application/json">>}
+				  ], JSON, Req);
 	ID ->
 	    %% Issue a call to the backend server to return a
 	    %% specific record
-	    mybackend:return_record(ID)
+	    case mybackend:return_record(ID) of
+		undefined ->
+		    cowboy_req:reply(404, Req);
+		{Id, _, _, Time} ->
+		    JSON = jiffy:encode({[{id, Id}, {time, Time}]}),
+		    cowboy_req:reply(200, [
+					   {<<"content-type">>, <<"application/json">>}
+					  ], JSON, Req)
+	    end
     end;
+
 handle(<<"POST">>, [<<"communication">>], Req) ->
     {ok, Data, _Req2} = cowboy_req:body(Req, []),
     {DecodedData} = jiffy:decode(Data),
