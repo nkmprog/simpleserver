@@ -108,11 +108,18 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({return, all}, _From, State) ->
-    Reply = ok,
+    Reply = ets:match(State#state.table_id, {'$1', '_', '_', '$2'}),
     {reply, Reply, State};
-handle_call({return, {id, _ID}}, _From, State) ->
-    Reply = ok,
+
+handle_call({return, {id, ID}}, _From, State) ->
+    Reply = case ets:lookup(State#state.table_id, ID) of
+		[{Id, _, _, Time}] ->
+		    [Id, Time];
+		_ ->
+		    undefined
+	    end,
     {reply, Reply, State};
+
 handle_call({create, id}, _From, State) ->
     Timestamp = integer_to_list(create_timestamp()),
     AlphaNumString = random_string(16),

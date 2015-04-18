@@ -49,29 +49,32 @@ terminate(_Reason, _Req, _State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle(<<"GET">>, [<<"stats">>], Req) ->
-    Params = cowboy_req:parse_qs(Req),
+    %% io:format("~n~p~n", [Req]),
+    {Params, _} = cowboy_req:qs_vals(Req),
+    %% io:format("~n~p~n", [Params]),
+    %% cowboy_req:reply(200, Req)
     RequestID = proplists:get_value(<<"id">>, Params),
     case RequestID of
-	undefined ->
-	    %% Issue a call to the backend server to return all records
-	    Reqs = mybackend:return_record(),
-	    Data = [{[{id, Id}, {time, Time}]} || {Id, _, _, Time} <- Reqs],
-	    JSON = jiffy:encode({[{data, Data}]}),
-	    cowboy_req:reply(200, [
-				   {<<"content-type">>, <<"application/json">>}
-				  ], JSON, Req);
-	ID ->
-	    %% Issue a call to the backend server to return a
-	    %% specific record
-	    case mybackend:return_record(ID) of
-		undefined ->
-		    cowboy_req:reply(404, Req);
-		{Id, _, _, Time} ->
-		    JSON = jiffy:encode({[{id, Id}, {time, Time}]}),
-		    cowboy_req:reply(200, [
-					   {<<"content-type">>, <<"application/json">>}
-					  ], JSON, Req)
-	    end
+    	undefined ->
+    	    %% Issue a call to the backend server to return all records
+    	    Reqs = mybackend:return_record(),
+    	    Data = [{[{id, list_to_binary(Id)}, {time, Time}]} || [Id, Time] <- Reqs],
+    	    JSON = jiffy:encode({[{data, Data}]}),
+    	    cowboy_req:reply(200, [
+    				   {<<"content-type">>, <<"application/json">>}
+    				  ], JSON, Req);
+    	ID ->
+    	    %% Issue a call to the backend server to return a
+    	    %% specific record
+    	    case mybackend:return_record(binary_to_list(ID)) of
+    		undefined ->
+    		    cowboy_req:reply(404, Req);
+    		[Id, Time] ->
+    		    JSON = jiffy:encode({[{id, list_to_binary(Id)}, {time, Time}]}),
+    		    cowboy_req:reply(200, [
+    					   {<<"content-type">>, <<"application/json">>}
+    					  ], JSON, Req)
+    	    end
     end;
 
 handle(<<"POST">>, [<<"communication">>], Req) ->
