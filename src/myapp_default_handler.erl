@@ -50,7 +50,7 @@ terminate(_Reason, _Req, _State) ->
 %%--------------------------------------------------------------------
 handle(<<"GET">>, [<<"stats">>], Req) ->
     Params = cowboy_req:parse_qs(Req),
-    {ok, RequestID} = proplists:get_value(<<"id">>, Params),
+    RequestID = proplists:get_value(<<"id">>, Params),
     case RequestID of
 	undefined ->
 	    %% Issue a call to the backend server to return all records
@@ -63,14 +63,24 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
 handle(<<"POST">>, [<<"communication">>], Req) ->
     {ok, Data, _Req2} = cowboy_req:body(Req, []),
     {DecodedData} = jiffy:decode(Data),
-    {ok, Provider} = proplists:get_value(<<"provider">>, DecodedData),    
-    case Provider of
-	<<"google">> ->
-	    %% issue a call to fetch google.com
-	    mybackend:fetch(google);
-	<<"sumup">> ->
-	    %% issue a call to fetch sumup.com
-	    mybackend:fetch(sumup)
+    Provider = proplists:get_value(<<"provider">>, DecodedData),
+    Result = case Provider of
+		 <<"google">> ->
+		     %% issue a call to fetch google.com
+		     mybackend:fetch(google);
+		 <<"sumup">> ->
+		     %% issue a call to fetch sumup.com
+		     mybackend:fetch(sumup)
+	     end,
+    io:format("RESULT========================== ~p~n", [Result]),
+    io:format("=========================~n"),
+    case Result of
+	{ok,{ _, _Headers, Body}} ->
+	    cowboy_req:reply(200, [{<<"content-type">>, <<"text/html">>}],
+			     Body, Req);
+	_ ->
+	    cowboy_req:reply(404, [{<<"content-type">>, <<"text/plain">>}],
+			     <<"Unable to fetch requested page.\n">>, Req)
     end;
 handle(_, _, Req) ->
     cowboy_req:reply(404, Req).

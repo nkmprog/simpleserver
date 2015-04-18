@@ -18,7 +18,9 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
+-define(MAXTIMEOUT, 10000).
 
+-import(http, [request/4]).
 -record(state, {}).
 
 %%%===================================================================
@@ -57,9 +59,9 @@ return_record(ID)->
 %% @end
 %%--------------------------------------------------------------------
 fetch(google) ->
-    gen_server:call(?SERVER, {fetch, google});
+    gen_server:call(?SERVER, {fetch, google}, ?MAXTIMEOUT);
 fetch(sumup) ->
-    gen_server:call(?SERVER, {fetch, sumup}).
+    gen_server:call(?SERVER, {fetch, sumup}, ?MAXTIMEOUT).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -100,10 +102,10 @@ handle_call({return, {id, _ID}}, _From, State) ->
     Reply = ok,
     {reply, Reply, State};    
 handle_call({fetch, google}, _From, State) ->
-    Reply = ok,
+    Reply = do_get(google),
     {reply, Reply, State};
 handle_call({fetch, sumup}, _From, State) ->
-    Reply = ok,
+    Reply = do_get(sumup),
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -160,3 +162,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+do_get(Site) ->
+    {Protocol, URL} = case Site of
+			  google -> {httpc, "http://www.google.com"};
+			  sumup -> {httpc, "https://sumup.co.uk/"}
+		      end,
+    Response = Protocol:request(get, {URL, []}, [], []),
+    case Response of
+	{error, {failed_connect, _}} ->
+	    {error, failed_connect};
+	_ ->
+	    Response
+    end.
