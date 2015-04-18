@@ -137,11 +137,11 @@ handle_call({create, id}, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({fetch, google, RequestID}, State) ->
-    ets:insert(State#state.table_id, {RequestID, create_timestamp()}),
+    ets:insert(State#state.table_id, {RequestID, create_timestamp(millis)}),
     spawn(fun() -> do_get(google, RequestID) end),
     {noreply, State};
 handle_cast({fetch, sumup, RequestID}, State) ->
-    ets:insert(State#state.table_id, {RequestID, create_timestamp()}),
+    ets:insert(State#state.table_id, {RequestID, create_timestamp(millis)}),
     spawn(fun() -> do_get(sumup, RequestID) end),
     {noreply, State}.
 
@@ -210,9 +210,9 @@ do_get(Site, ReqId) ->
     Response = Protocol:request(get, {URL, []}, [], []),
     case Response of
 	{error, {failed_connect, _}} ->
-	    ?SERVER ! {do_get, failed_connect, ReqId, create_timestamp()};
+	    ?SERVER ! {do_get, failed_connect, ReqId, create_timestamp(millis)};
 	_ ->
-	    ?SERVER ! {do_get, successfull, ReqId, create_timestamp()}
+	    ?SERVER ! {do_get, successfull, ReqId, create_timestamp(millis)}
     end.
 
 %%--------------------------------------------------------------------
@@ -222,6 +222,10 @@ do_get(Site, ReqId) ->
 %%--------------------------------------------------------------------
 create_timestamp() ->    
     calendar:datetime_to_gregorian_seconds(calendar:local_time()).
+
+create_timestamp(millis) ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    (MegaSeconds * 1000000 + Seconds) * 1000 + (MicroSeconds div 1000).
 
 %%--------------------------------------------------------------------
 %% @doc
