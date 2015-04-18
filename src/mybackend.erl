@@ -18,9 +18,6 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
--define(MAXTIMEOUT, 10000).
-
--import(http, [request/4]).
 -record(state, {}).
 
 %%%===================================================================
@@ -59,9 +56,9 @@ return_record(ID)->
 %% @end
 %%--------------------------------------------------------------------
 fetch(google) ->
-    gen_server:call(?SERVER, {fetch, google}, ?MAXTIMEOUT);
+    gen_server:call(?SERVER, {fetch, google});
 fetch(sumup) ->
-    gen_server:call(?SERVER, {fetch, sumup}, ?MAXTIMEOUT).
+    gen_server:call(?SERVER, {fetch, sumup}).
 
 %%%===================================================================
 %%% gen_server callbacks

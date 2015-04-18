@@ -64,23 +64,15 @@ handle(<<"POST">>, [<<"communication">>], Req) ->
     {ok, Data, _Req2} = cowboy_req:body(Req, []),
     {DecodedData} = jiffy:decode(Data),
     Provider = proplists:get_value(<<"provider">>, DecodedData),
-    Result = case Provider of
-		 <<"google">> ->
-		     %% issue a call to fetch google.com
-		     mybackend:fetch(google);
-		 <<"sumup">> ->
-		     %% issue a call to fetch sumup.com
-		     mybackend:fetch(sumup)
-	     end,
-    io:format("RESULT========================== ~p~n", [Result]),
-    io:format("=========================~n"),
-    case Result of
-	{ok,{ _, _Headers, Body}} ->
-	    cowboy_req:reply(200, [{<<"content-type">>, <<"text/html">>}],
-			     Body, Req);
-	_ ->
-	    cowboy_req:reply(404, [{<<"content-type">>, <<"text/plain">>}],
-			     <<"Unable to fetch requested page.\n">>, Req)
-    end;
+    case Provider of
+	<<"google">> ->
+	    %% issue a call to fetch google.com
+	    spawn(fun() -> mybackend:fetch(google) end);
+	<<"sumup">> ->
+	    %% issue a call to fetch sumup.com
+	    spawn(fun() -> mybackend:fetch(sumup) end)
+    end,
+    cowboy_req:reply(202, Req);
+
 handle(_, _, Req) ->
     cowboy_req:reply(404, Req).
