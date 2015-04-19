@@ -89,7 +89,7 @@ create_unique_id() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    TableID = ets:new(request_records, []),    
+    TableID = ets:new(request_records, [ordered_set]),    
     {ok, #state{table_id=TableID}}.
 
 %%--------------------------------------------------------------------
@@ -107,13 +107,13 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({return, all}, _From, State) ->
-    Reply = ets:match(State#state.table_id, {'$1', '$2', '$3'}),
+    Reply = ets:match(State#state.table_id, {'$1', '$2', '$3', '$4', '$5'}),
     {reply, Reply, State};
 
 handle_call({return, {id, ID}}, _From, State) ->
     Reply = case ets:lookup(State#state.table_id, ID) of
-		[{Id, ResponseTime, TotalTime}] ->
-		    [Id, ResponseTime, TotalTime];
+		[{Id, ReqId, Provider, ResponseTime, TotalTime}] ->
+		    [Id, ReqId, Provider, ResponseTime, TotalTime];
 		_ ->
 		    undefined
 	    end,
@@ -136,11 +136,11 @@ handle_call({create, id}, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({fetch, google, RequestID}, State) ->
-    ets:insert(State#state.table_id, {RequestID, create_timestamp(micros)}),
+    ets:insert(State#state.table_id, {RequestID, google, create_timestamp(micros)}),
     spawn(fun() -> do_get(google, RequestID) end),
     {noreply, State};
 handle_cast({fetch, youtube, RequestID}, State) ->
-    ets:insert(State#state.table_id, {RequestID, create_timestamp(micros)}),
+    ets:insert(State#state.table_id, {RequestID, youtube, create_timestamp(micros)}),
     spawn(fun() -> do_get(youtube, RequestID) end),
     {noreply, State}.
 
@@ -155,14 +155,14 @@ handle_cast({fetch, youtube, RequestID}, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info({do_get, successfull, ReqId, ResponseTime}, State) ->
-    [{ReqId, StartTime}] = ets:lookup(State#state.table_id, ReqId),
+    [{ReqId, Provider, StartTime}] = ets:lookup(State#state.table_id, ReqId),
     TotalTime = create_timestamp(micros) - StartTime,
-    ets:insert(State#state.table_id, {ReqId, ResponseTime, TotalTime}), 
+    ets:insert(State#state.table_id, {create_timestamp(micros), ReqId, Provider, ResponseTime, TotalTime}), 
     {noreply, State};
 handle_info({do_get, failed_connect, ReqId, ResponseTime}, State) ->
-    [{ReqId, StartTime}] = ets:lookup(State#state.table_id, ReqId),
+    [{ReqId, Provider, StartTime}] = ets:lookup(State#state.table_id, ReqId),
     TotalTime = create_timestamp(micros) - StartTime,
-    ets:insert(State#state.table_id, {ReqId, ResponseTime, TotalTime}), 
+    ets:insert(State#state.table_id, {create_timestamp(micros), ReqId, Provider, ResponseTime, TotalTime}), 
     {noreply, State}.
 
 %%--------------------------------------------------------------------

@@ -56,9 +56,11 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     	undefined ->
     	    %% Issue a call to the backend server to return all records
     	    Reqs = mybackend:return_record(),
-    	    Data = [{[{id, list_to_binary(Id)},
+    	    Data = [{[{id, Id},
+		      {req_id, list_to_binary(ReqId)},
+		      {provider, Provider},
 		      {response_time, ResponseTime},
-		      {total_time, TotalTime}]} || [Id, ResponseTime, TotalTime] <- Reqs],
+		      {total_time, TotalTime}]} || [Id, ReqId, Provider, ResponseTime, TotalTime] <- Reqs],
     	    JSON = jiffy:encode({[{data, Data}]}, [pretty]),
     	    cowboy_req:reply(200, [
     				   {<<"content-type">>, <<"application/json">>}
@@ -69,8 +71,9 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     	    case mybackend:return_record(binary_to_list(ID)) of
     		undefined ->
     		    cowboy_req:reply(404, Req);
-    		[Id, ResponseTime, TotalTime] ->
+    		[Id, Provider, ResponseTime, TotalTime] ->
     		    JSON = jiffy:encode({[{id, list_to_binary(Id)},
+					  {provider, Provider},
 					  {response_time, ResponseTime},
 					  {total_time, TotalTime}]}),
     		    cowboy_req:reply(200, [
