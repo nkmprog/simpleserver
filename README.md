@@ -1,5 +1,5 @@
 # simpleserver
-  A simple server Erlang server for purely educational and testing purposes.
+  A simple Erlang server for purely educational and testing purposes.
   
   Features:
   * REST interface using Cowboy http server
@@ -12,7 +12,7 @@
     $ rebar compile
 
 ##Running
-  To run simpleserver start an Erlang node with simpleserver library in it's code path.
+  To run simpleserver start an Erlang node with simpleserver library in its code path.
 
     $ erl -pa $PATH_TO_SIMPLESERVER/ebin/ $PATH_TO_SIMPLESERVER/deps/*/ebin/
     
@@ -21,3 +21,11 @@
 
 ##Testscript
   A simple testscript is included in the repository. Running it will produce an output.txt file with the result.
+
+##Example Requests
+    $ curl -v -X POST http://localhost:8001/communication -d '{"provider": $provider}'
+    $ curl -v -X GET http://localhost:8001/stats
+    $ curl -v -X GET http://localhost:8001/stats?id=$reqid
+
+  provider = google | youtube
+  reqid = as returned by the communication rest method
