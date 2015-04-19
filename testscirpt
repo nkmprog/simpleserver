@@ -27,7 +27,7 @@ done
 sleep 10s
 
 echo "=========================================" >> output.txt
-echo "                    REPORST              " >> output.txt
+echo "                    REPORTS              " >> output.txt
 echo "=========================================" >> output.txt
 
 reports="$(curl -v -X GET "http://127.0.0.1:8001/stats" )"
