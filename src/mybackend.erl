@@ -107,13 +107,13 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({return, all}, _From, State) ->
-    Reply = ets:match(State#state.table_id, {'$1', '_', '_', '$2'}),
+    Reply = ets:match(State#state.table_id, {'$1', '$2', '$3'}),
     {reply, Reply, State};
 
 handle_call({return, {id, ID}}, _From, State) ->
     Reply = case ets:lookup(State#state.table_id, ID) of
-		[{Id, _, _, Time}] ->
-		    [Id, Time];
+		[{Id, ResponseTime, TotalTime}] ->
+		    [Id, ResponseTime, TotalTime];
 		_ ->
 		    undefined
 	    end,
@@ -154,15 +154,15 @@ handle_cast({fetch, youtube, RequestID}, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({do_get, successfull, ReqId, FinishTime}, State) ->
+handle_info({do_get, successfull, ReqId, ResponseTime}, State) ->
     [{ReqId, StartTime}] = ets:lookup(State#state.table_id, ReqId),
-    ElapsedTime = FinishTime - StartTime,
-    ets:insert(State#state.table_id, {ReqId, StartTime, FinishTime, ElapsedTime}), 
+    TotalTime = create_timestamp(micros) - StartTime,
+    ets:insert(State#state.table_id, {ReqId, ResponseTime, TotalTime}), 
     {noreply, State};
-handle_info({do_get, failed_connect, ReqId, FinishTime}, State) ->
+handle_info({do_get, failed_connect, ReqId, ResponseTime}, State) ->
     [{ReqId, StartTime}] = ets:lookup(State#state.table_id, ReqId),
-    ElapsedTime = FinishTime - StartTime,
-    ets:insert(State#state.table_id, {ReqId, StartTime, FinishTime, ElapsedTime}), 
+    TotalTime = create_timestamp(micros) - StartTime,
+    ets:insert(State#state.table_id, {ReqId, ResponseTime, TotalTime}), 
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -208,12 +208,12 @@ do_get(Site, ReqId) ->
     Start = create_timestamp(micros),
     Response = Protocol:request(get, {URL, []}, [], []),
     Elapsed = create_timestamp(micros) - Start,
-    io:format("Response from httpc for ReqID: ~p took ~p milliseconds~n", [ReqId, Elapsed]),
+
     case Response of
 	{error, {failed_connect, _}} ->
-	    ?SERVER ! {do_get, failed_connect, ReqId, create_timestamp(micros)};
+	    ?SERVER ! {do_get, failed_connect, ReqId, Elapsed};
 	_ ->
-	    ?SERVER ! {do_get, successfull, ReqId, create_timestamp(micros)}
+	    ?SERVER ! {do_get, successfull, ReqId, Elapsed}
     end.
 
 %%--------------------------------------------------------------------

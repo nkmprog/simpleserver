@@ -49,16 +49,16 @@ terminate(_Reason, _Req, _State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle(<<"GET">>, [<<"stats">>], Req) ->
-    %% io:format("~n~p~n", [Req]),
     {Params, _} = cowboy_req:qs_vals(Req),
-    %% io:format("~n~p~n", [Params]),
-    %% cowboy_req:reply(200, Req)
     RequestID = proplists:get_value(<<"id">>, Params),
+
     case RequestID of
     	undefined ->
     	    %% Issue a call to the backend server to return all records
     	    Reqs = mybackend:return_record(),
-    	    Data = [{[{id, list_to_binary(Id)}, {time, Time}]} || [Id, Time] <- Reqs],
+    	    Data = [{[{id, list_to_binary(Id)},
+		      {response_time, ResponseTime},
+		      {total_time, TotalTime}]} || [Id, ResponseTime, TotalTime] <- Reqs],
     	    JSON = jiffy:encode({[{data, Data}]}, [pretty]),
     	    cowboy_req:reply(200, [
     				   {<<"content-type">>, <<"application/json">>}
@@ -69,8 +69,10 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     	    case mybackend:return_record(binary_to_list(ID)) of
     		undefined ->
     		    cowboy_req:reply(404, Req);
-    		[Id, Time] ->
-    		    JSON = jiffy:encode({[{id, list_to_binary(Id)}, {time, Time}]}),
+    		[Id, ResponseTime, TotalTime] ->
+    		    JSON = jiffy:encode({[{id, list_to_binary(Id)},
+					  {response_time, ResponseTime},
+					  {total_time, TotalTime}]}),
     		    cowboy_req:reply(200, [
     					   {<<"content-type">>, <<"application/json">>}
     					  ], JSON, Req)
