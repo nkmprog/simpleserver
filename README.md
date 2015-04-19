@@ -8,6 +8,7 @@
 ##Installing
     $ git clone https://github.com/nkmprog/simpleserver.git
     $ cd simpleserver
+    $ rebar get-deps
     $ rebar compile
 
 ##Running
