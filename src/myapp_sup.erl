@@ -38,6 +38,8 @@ start_link() ->
 %%--------------------------------------------------------------------
 
 init([]) ->
+    inets:start(),
+    ssl:start(),
 
     RestartStrategy = one_for_one,
     MaxRestarts = 5,

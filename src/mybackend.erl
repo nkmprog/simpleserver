@@ -61,8 +61,8 @@ return_record(ID)->
 %%--------------------------------------------------------------------
 fetch(google, RequestID) ->
     gen_server:cast(?SERVER, {fetch, google, RequestID});
-fetch(sumup, RequestID) ->
-    gen_server:cast(?SERVER, {fetch, sumup, RequestID}).
+fetch(youtube, RequestID) ->
+    gen_server:cast(?SERVER, {fetch, youtube, RequestID}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -89,7 +89,6 @@ create_unique_id() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    inets:start(),
     TableID = ets:new(request_records, []),    
     {ok, #state{table_id=TableID}}.
 
@@ -137,12 +136,12 @@ handle_call({create, id}, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({fetch, google, RequestID}, State) ->
-    ets:insert(State#state.table_id, {RequestID, create_timestamp(millis)}),
+    ets:insert(State#state.table_id, {RequestID, create_timestamp(micros)}),
     spawn(fun() -> do_get(google, RequestID) end),
     {noreply, State};
-handle_cast({fetch, sumup, RequestID}, State) ->
-    ets:insert(State#state.table_id, {RequestID, create_timestamp(millis)}),
-    spawn(fun() -> do_get(sumup, RequestID) end),
+handle_cast({fetch, youtube, RequestID}, State) ->
+    ets:insert(State#state.table_id, {RequestID, create_timestamp(micros)}),
+    spawn(fun() -> do_get(youtube, RequestID) end),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -178,7 +177,6 @@ handle_info({do_get, failed_connect, ReqId, FinishTime}, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, State) ->
-    inets:stop(),
     ets:delete(State#state.table_id),
     ok.
 
@@ -205,14 +203,17 @@ code_change(_OldVsn, State, _Extra) ->
 do_get(Site, ReqId) ->
     {Protocol, URL} = case Site of
 			  google -> {httpc, "http://www.google.com"};
-			  sumup -> {httpc, "https://sumup.co.uk/"}
+			  youtube -> {httpc, "http://www.youtube.com"}
 		      end,
+    Start = create_timestamp(micros),
     Response = Protocol:request(get, {URL, []}, [], []),
+    Elapsed = create_timestamp(micros) - Start,
+    io:format("Response from httpc for ReqID: ~p took ~p milliseconds~n", [ReqId, Elapsed]),
     case Response of
 	{error, {failed_connect, _}} ->
-	    ?SERVER ! {do_get, failed_connect, ReqId, create_timestamp(millis)};
+	    ?SERVER ! {do_get, failed_connect, ReqId, create_timestamp(micros)};
 	_ ->
-	    ?SERVER ! {do_get, successfull, ReqId, create_timestamp(millis)}
+	    ?SERVER ! {do_get, successfull, ReqId, create_timestamp(micros)}
     end.
 
 %%--------------------------------------------------------------------
@@ -225,7 +226,11 @@ create_timestamp() ->
 
 create_timestamp(millis) ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
-    (MegaSeconds * 1000000 + Seconds) * 1000 + (MicroSeconds div 1000).
+    (MegaSeconds * 1000000 + Seconds) * 1000 + (MicroSeconds div 1000);
+
+create_timestamp(micros) ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
 
 %%--------------------------------------------------------------------
 %% @doc

@@ -1,19 +1,19 @@
 #!/bin/bash
 
 url="http://127.0.0.1:8001/communication"
-for i in `seq 1 100`;
+for i in `seq 1 10`;
 do
     content="$(curl -X POST "$url" -d '{"provider":"google"}')"
     echo "$content" >> output.txt
 done
 
-for i in `seq 1 200`;
+for i in `seq 1 20`;
 do
-    content="$(curl -X POST "$url" -d '{"provider":"sumup"}')"
+    content="$(curl -X POST "$url" -d '{"provider":"youtube"}')"
     echo "$content" >> output.txt
 done
 
-for i in `seq 1 100`;
+for i in `seq 1 10`;
 do
     content="$(curl -X POST "$url" -d '{"provider":"google"}')"
     echo "$content" >> output.txt

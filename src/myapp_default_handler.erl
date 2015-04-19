@@ -59,7 +59,7 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     	    %% Issue a call to the backend server to return all records
     	    Reqs = mybackend:return_record(),
     	    Data = [{[{id, list_to_binary(Id)}, {time, Time}]} || [Id, Time] <- Reqs],
-    	    JSON = jiffy:encode({[{data, Data}]}),
+    	    JSON = jiffy:encode({[{data, Data}]}, [pretty]),
     	    cowboy_req:reply(200, [
     				   {<<"content-type">>, <<"application/json">>}
     				  ], JSON, Req);
@@ -86,9 +86,9 @@ handle(<<"POST">>, [<<"communication">>], Req) ->
 	<<"google">> ->
 	    %% issue an async call to fetch google.com
 	    ok = mybackend:fetch(google, ID);
-	<<"sumup">> ->
+	<<"youtube">> ->
 	    %% issue a call to fetch sumup.com
-	    ok = mybackend:fetch(sumup, ID)
+	    ok = mybackend:fetch(youtube, ID)
     end,
     JSON = jiffy:encode({[{<<"request_id">>, list_to_binary(ID)}]}),
     cowboy_req:reply(202, [
