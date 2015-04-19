@@ -71,11 +71,12 @@ handle(<<"GET">>, [<<"stats">>], Req) ->
     	    case mybackend:return_record(binary_to_list(ID)) of
     		undefined ->
     		    cowboy_req:reply(404, Req);
-    		[Id, Provider, ResponseTime, TotalTime] ->
-    		    JSON = jiffy:encode({[{id, list_to_binary(Id)},
+    		[Id, ReqId, Provider, ResponseTime, TotalTime] ->
+    		    JSON = jiffy:encode({[{id, Id},
+					  {req_id, list_to_binary(ReqId)},
 					  {provider, Provider},
 					  {response_time, ResponseTime},
-					  {total_time, TotalTime}]}),
+					  {total_time, TotalTime}]}, [pretty]),
     		    cowboy_req:reply(200, [
     					   {<<"content-type">>, <<"application/json">>}
     					  ], JSON, Req)

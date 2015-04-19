@@ -110,9 +110,9 @@ handle_call({return, all}, _From, State) ->
     Reply = ets:match(State#state.table_id, {'$1', '$2', '$3', '$4', '$5'}),
     {reply, Reply, State};
 
-handle_call({return, {id, ID}}, _From, State) ->
-    Reply = case ets:lookup(State#state.table_id, ID) of
-		[{Id, ReqId, Provider, ResponseTime, TotalTime}] ->
+handle_call({return, {id, ReqId}}, _From, State) ->
+    Reply = case ets:match(State#state.table_id, {'$1', ReqId, '$3', '$4', '$5'}) of
+		[[Id, Provider, ResponseTime, TotalTime]] ->
 		    [Id, ReqId, Provider, ResponseTime, TotalTime];
 		_ ->
 		    undefined
