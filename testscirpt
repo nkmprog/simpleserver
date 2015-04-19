@@ -1,6 +1,11 @@
 #!/bin/bash
 
 url="http://127.0.0.1:8001/communication"
+
+echo "=========================================" >> output.txt
+echo "                BEGIN TEST               " >> output.txt
+echo "=========================================" >> output.txt
+
 for i in `seq 1 10`;
 do
     content="$(curl -X POST "$url" -d '{"provider":"google"}')"
@@ -19,6 +24,16 @@ do
     echo "$content" >> output.txt
 done
 
-reports="$(curl -X GET "http://127.0.0.1:8001/stats" )"
-echo "=====================" >> output.txt
+sleep 10s
+
+echo "=========================================" >> output.txt
+echo "                    REPORST              " >> output.txt
+echo "=========================================" >> output.txt
+
+reports="$(curl -v -X GET "http://127.0.0.1:8001/stats" )"
 echo "$reports" >> output.txt
+
+
+echo "=========================================" >> output.txt
+echo "                END TEST                 " >> output.txt
+echo "=========================================" >> output.txt
