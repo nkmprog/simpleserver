@@ -24,8 +24,29 @@
 
 ##Example Requests
     $ curl -v -X POST http://localhost:8001/communication -d '{"provider": $provider}'
-    $ curl -v -X GET http://localhost:8001/stats
-    $ curl -v -X GET http://localhost:8001/stats?id=$reqid
+    > {"request_id":"63596864760WCL5kWtLxxDgKtJn"}
 
-  provider = google | youtube
+    $ curl -v -X GET http://localhost:8001/stats
+    > {
+      "data" : [
+      	{
+	  "req_id" : "63596864646y6AlQEnplYExYsSk",
+      	  "provider" : "google",
+      	  "finish_time" : 1429634646494910,
+      	  "response_time" : 424654,
+      	  "total_time" : 424687
+    	},
+        ...
+      ]}
+
+    $ curl -v -X GET http://localhost:8001/stats?id=$reqid
+    > {
+       "req_id" : "63596864760WCL5kWtLxxDgKtJn",
+       "provider" : "google",
+       "finish_time" : 1429634760757794,
+       "response_time" : 124901,
+       "total_time" : 124973
+      }
+
+  provider = google | youtube  
   reqid = as returned by the communication rest method
