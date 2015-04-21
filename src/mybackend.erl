@@ -39,16 +39,38 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
-%% @doc
-%% @spec
-%% @end
+%% @doc 
+%% Returns all request records.
+%% 
+%% @spec return_record() -> Reply
+%% where
+%%       Reply = [RecordInfo1, ..., RecordInfoN],
+%%       RecordInfo = [FinishTime, RequestId, Provider,
+%%                                 ResponseTime, TotalTime],
+%%       FinishTime = int(),
+%%       RequestId = string(),
+%%       Provider = google | youtube,
+%%       ResponseTime = int(),
+%%       TotalTime = int()
+%% @end 
 %%--------------------------------------------------------------------
 return_record() ->
     gen_server:call(?SERVER, {return, all}).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% @spec
+%% Return a specific request record.
+%% 
+%% @spec return_record() -> Reply
+%% where
+%%       Reply = [RecordInfo],
+%%       RecordInfo = [FinishTime, RequestId, Provider,
+%%                                 ResponseTime, TotalTime],
+%%       FinishTime = int(),
+%%       RequestId = string(),
+%%       Provider = google | youtube,
+%%       ResponseTime = int(),
+%%       TotalTime = int()
 %% @end
 %%--------------------------------------------------------------------
 return_record(ID)->
@@ -56,7 +78,12 @@ return_record(ID)->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% @spec
+%% Sends an asynchronous request and returns ok immediately
+%%
+%% @spec fetch(Provider, RequestID) -> ok
+%% where 
+%%       Provider = google | youtube,
+%%       RequestID = string()
 %% @end
 %%--------------------------------------------------------------------
 fetch(google, RequestID) ->
@@ -66,7 +93,9 @@ fetch(youtube, RequestID) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% @spec
+%% Makes a synchronous request to the gen_server to create a unique id
+%%
+%% @spec create_unique_id() -> string()
 %% @end
 %%--------------------------------------------------------------------
 create_unique_id() ->
@@ -80,7 +109,8 @@ create_unique_id() ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Initializes the server
+%% Initializes the server state. Creates a new ets table which holds
+%% record information.
 %%
 %% @spec init(Args) -> {ok, State} |
 %%                     {ok, State, Timeout} |
@@ -109,7 +139,6 @@ init([]) ->
 handle_call({return, all}, _From, State) ->
     Reply = ets:match(State#state.table_id, {'$1', '$2', '$3', '$4', '$5'}),
     {reply, Reply, State};
-
 handle_call({return, {id, ReqId}}, _From, State) ->
     Reply = case ets:match(State#state.table_id, {'$1', ReqId, '$3', '$4', '$5'}) of
 		[[Id, Provider, ResponseTime, TotalTime]] ->
@@ -118,7 +147,6 @@ handle_call({return, {id, ReqId}}, _From, State) ->
 		    undefined
 	    end,
     {reply, Reply, State};
-
 handle_call({create, id}, _From, State) ->
     Timestamp = integer_to_list(create_timestamp()),
     AlphaNumString = random_string(16),
@@ -157,12 +185,14 @@ handle_cast({fetch, youtube, RequestID}, State) ->
 handle_info({do_get, successfull, ReqId, ResponseTime}, State) ->
     [{ReqId, Provider, StartTime}] = ets:lookup(State#state.table_id, ReqId),
     TotalTime = create_timestamp(micros) - StartTime,
-    ets:insert(State#state.table_id, {create_timestamp(micros), ReqId, Provider, ResponseTime, TotalTime}), 
+    ets:insert(State#state.table_id, {create_timestamp(micros),
+				      ReqId, Provider, ResponseTime, TotalTime}), 
     {noreply, State};
 handle_info({do_get, failed_connect, ReqId, ResponseTime}, State) ->
     [{ReqId, Provider, StartTime}] = ets:lookup(State#state.table_id, ReqId),
     TotalTime = create_timestamp(micros) - StartTime,
-    ets:insert(State#state.table_id, {create_timestamp(micros), ReqId, Provider, ResponseTime, TotalTime}), 
+    ets:insert(State#state.table_id, {create_timestamp(micros),
+				      ReqId, Provider, ResponseTime, TotalTime}), 
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -197,7 +227,16 @@ code_change(_OldVsn, State, _Extra) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% @spec
+%% Makes a sychronous http request to either google or youtube.
+%% 
+%% @spec do_get(Site, RequestID) -> 
+%%                  {do_get, failed_connect, RequestID, ElapsedTime} |
+%%                  {do_get, successfull, RequestID, ElapsedTime}
+%% where
+%%       Site = google | youtube,
+%%       RequestID = string(),
+%%       ElapsedTime = int()
+%%
 %% @end
 %%--------------------------------------------------------------------
 do_get(Site, ReqId) ->
@@ -217,9 +256,7 @@ do_get(Site, ReqId) ->
     end.
 
 %%--------------------------------------------------------------------
-%% @doc
-%% @spec
-%% @end
+%% Creates a timestamp in either seconds, milliseconds or microseconds
 %%--------------------------------------------------------------------
 create_timestamp() ->    
     calendar:datetime_to_gregorian_seconds(calendar:local_time()).
@@ -233,9 +270,7 @@ create_timestamp(micros) ->
     (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
 
 %%--------------------------------------------------------------------
-%% @doc
-%% @spec
-%% @end
+%% Creates a random string
 %%--------------------------------------------------------------------
 random_string(Len) ->
     Chrs = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
